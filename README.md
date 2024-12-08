@@ -67,7 +67,7 @@ npm install
 npm start
 ```
 
-Open [http://127.0.0.1:3000/]to see your Dapp. You will
+Open [http://127.0.0.1:3000/] to see your Dapp. You will
 need to have [Metamask](https://metamask.io) installed and listening to
 `localhost 8545`.
 
