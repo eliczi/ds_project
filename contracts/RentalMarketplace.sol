@@ -97,7 +97,7 @@ contract RentalMarketplace {
             msg.sender == item.owner || msg.sender == agreement.renter,
             "Not authorized"
         );
-        require(block.timestamp >= agreement.endTime, "Rental period not ended");
+        //require(block.timestamp >= agreement.endTime, "Rental period not ended");
 
         uint256 expectedTotalRent = item.rentalPrice * (item.rentalDuration);//calculate expected total rent
         require(agreement.totalRentPaid >= expectedTotalRent, "Due rent has not been fully paid");
@@ -107,6 +107,27 @@ contract RentalMarketplace {
         item.state = RentalState.Completed;
         emit RentalEnded(_itemId, agreement.renter);
     }
+
+    function getRentedItemsByUser(address _user) public view returns (uint256[] memory) {
+    uint256 count = 0;
+    for (uint256 i = 1; i <= itemCounter; i++) {
+        if (rentalAgreements[i].renter == _user && items[i].state == RentalState.Rented) {
+            count++;
+        }
+    }
+
+    uint256[] memory rentedItemIds = new uint256[](count);
+    uint256 index = 0;
+    for (uint256 i = 1; i <= itemCounter; i++) {
+        if (rentalAgreements[i].renter == _user && items[i].state == RentalState.Rented) {
+            rentedItemIds[index] = i;
+            index++;
+        }
+    }
+
+    return rentedItemIds;
+}
+
 
 
 }
