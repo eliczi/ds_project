@@ -9,6 +9,7 @@ contract RentalMarketplace {
         address payable owner;
         string description;
         string name;
+        string category;
         string location;
         uint256 rentalPrice;
         uint256 securityDeposit;
@@ -21,7 +22,10 @@ contract RentalMarketplace {
         address payable renter;
         uint256 startTime;
         uint256 endTime;
-        uint256 totalRentPaid; // variable to track total rent payments
+        uint256 totalRentPaid; // Total rent payments made
+        uint256 lastPaymentTime; // Timestamp of the last rent payment
+        uint256 numberOfPaymentsMade; // Number of monthly payments made
+        uint256 nextPaymentDue; // Timestamp when the next payment is duede
     }
 
     uint256 public itemCounter;
@@ -32,13 +36,14 @@ contract RentalMarketplace {
     event RentalStarted(uint256 indexed itemId, address renter);
     event RentPaid(uint256 indexed itemId, address renter, uint256 amount);
     event RentalEnded(uint256 indexed itemId, address renter);
+    event RentalOverdueResolved(uint256 indexed itemId, address owner);
 
     uint256 constant SECONDS_IN_DAY = 86400;
     uint256 constant DAYS_IN_MONTH = 30;
     uint256 constant SECONDS_IN_MONTH = SECONDS_IN_DAY * DAYS_IN_MONTH; // 2,592,000 seconds
 
 
-    function listItem(string memory _description, string memory _name, string memory _location,uint256 _rentalPrice, uint256 _securityDeposit, uint256 _rentalDuration) public {
+    function listItem(string memory _description, string memory _name, string memory _category, string memory _location,uint256 _rentalPrice, uint256 _securityDeposit, uint256 _rentalDuration) public {
             require(_rentalDuration > 0, "Duration must be at least one month");
             itemCounter++;
             items[itemCounter] = Item(
@@ -46,6 +51,7 @@ contract RentalMarketplace {
                 payable(msg.sender), // payable type, allowing it to receive Ether
                 _description,
                 _name,
+                _category,
                 _location,
                 _rentalPrice,
                 _securityDeposit,
@@ -58,6 +64,7 @@ contract RentalMarketplace {
         Item storage item = items[_itemId];
         require(item.state == RentalState.Available, "Item not available");
         require(msg.value == item.securityDeposit, "Incorrect deposit amount");//amount of Wei sent with the transaction
+        require(item.owner != msg.sender, "Cannot rent to itself"); // cannot rent to itself
 
         item.state = RentalState.Rented;
         rentalAgreements[_itemId] = RentalAgreement(
@@ -66,7 +73,10 @@ contract RentalMarketplace {
             block.timestamp,
             //block.timestamp + item.rentalDuration
             block.timestamp + (item.rentalDuration * SECONDS_IN_MONTH),
-            0
+            0,
+            block.timestamp, // Initialize lastPaymentTime 
+            0,
+            block.timestamp + SECONDS_IN_MONTH // nextPaymentDue after first month
         );
         emit RentalStarted(_itemId, msg.sender);
     }
@@ -82,7 +92,11 @@ contract RentalMarketplace {
         uint256 expectedTotalRent = item.rentalPrice * (item.rentalDuration);//calculate expected total rent
         require(agreement.totalRentPaid < expectedTotalRent, "Cannot overpay");//prevents from overpaying
 
-        agreement.totalRentPaid += msg.value; //update the rentPaid variable
+
+        agreement.totalRentPaid += msg.value;
+        agreement.lastPaymentTime = block.timestamp;
+        agreement.numberOfPaymentsMade += 1;
+        agreement.nextPaymentDue += SECONDS_IN_MONTH;
 
         item.owner.transfer(msg.value);
         emit RentPaid(_itemId, msg.sender, msg.value);
@@ -109,26 +123,55 @@ contract RentalMarketplace {
     }
 
     function getRentedItemsByUser(address _user) public view returns (uint256[] memory) {
-    uint256 count = 0;
-    for (uint256 i = 1; i <= itemCounter; i++) {
-        if (rentalAgreements[i].renter == _user && items[i].state == RentalState.Rented) {
-            count++;
+        uint256 count = 0;
+        for (uint256 i = 1; i <= itemCounter; i++) {
+            if (rentalAgreements[i].renter == _user && items[i].state == RentalState.Rented) {
+                count++;
+            }
         }
+
+        uint256[] memory rentedItemIds = new uint256[](count);
+        uint256 index = 0;
+        for (uint256 i = 1; i <= itemCounter; i++) {
+            if (rentalAgreements[i].renter == _user && items[i].state == RentalState.Rented) {
+                rentedItemIds[index] = i;
+                index++;
+            }
+        }
+
+        return rentedItemIds;
     }
 
-    uint256[] memory rentedItemIds = new uint256[](count);
-    uint256 index = 0;
-    for (uint256 i = 1; i <= itemCounter; i++) {
-        if (rentalAgreements[i].renter == _user && items[i].state == RentalState.Rented) {
-            rentedItemIds[index] = i;
-            index++;
-        }
+    function resolveOverdueRental(uint256 _itemId) public {
+        Item storage item = items[_itemId];
+        RentalAgreement storage agreement = rentalAgreements[_itemId];
+
+        require(item.state == RentalState.Rented, "Item is not currently rented");
+        require(block.timestamp > agreement.endTime, "Rental period not yet ended");
+
+        uint256 expectedTotalRent = item.rentalPrice * item.rentalDuration;
+        require(agreement.totalRentPaid < expectedTotalRent, "Rent has been fully paid");
+
+        item.state = RentalState.Completed;
+
+        item.owner.transfer(item.securityDeposit);
+
+        emit RentalOverdueResolved(_itemId, item.owner);
+
     }
+    function checkAndResolveOverdue(uint256 _itemId) public {
 
-    return rentedItemIds;
-}
+        RentalAgreement storage agreement = rentalAgreements[_itemId];
+        Item storage item = items[_itemId];
 
+        require(block.timestamp > agreement.nextPaymentDue, "Payment not overdue");
+        require(agreement.totalRentPaid < agreement.numberOfPaymentsMade * items[_itemId].rentalPrice, "Rent fully paid");
 
+        item.state = RentalState.Completed;
+        item.owner.transfer(item.securityDeposit);
+        emit RentalOverdueResolved(_itemId, item.owner);
+
+    }
 
 }
 

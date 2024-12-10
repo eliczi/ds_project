@@ -25,12 +25,13 @@ Before you begin, ensure you have the following installed on your machine:
 ### 1. Reset MetaMask
 
 To ensure a clean state and avoid any potential issues with cached data, reset your MetaMask account.
+Possible error:  Received invalid block tag XXX. Latest block number is 1
 
 1. Open MetaMask in your browser.
 2. Click on the account icon and navigate to **Settings**.
 3. Go to **Advanced**.
 4. Scroll down and click on **Clear Activity Tab Data**.
-5. Set up new network
+5. Delete and then set up new network
  ![MetaMask Reset](metamask.png)
 
 
