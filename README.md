@@ -1,15 +1,5 @@
-# XXX
+# Dapp
 
-## Table of Contents
-
-- [Setup](#setup)
-  - [1. Reset MetaMask](#1-reset-metamask)
-- [Running the Project](#running-the-project)
-  - [1. Start Hardhat Node](#1-start-hardhat-node)
-  - [2. Deploy Contracts](#2-deploy-contracts)
-  - [3. Start the Application](#3-start-the-application)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
 
 
 ## Prerequisites
