@@ -1,7 +1,5 @@
 # Dapp
 
-
-
 ## Prerequisites
 
 Before you begin, ensure you have the following installed on your machine:
@@ -11,7 +9,9 @@ Before you begin, ensure you have the following installed on your machine:
 - [MetaMask](https://metamask.io/) extension in your browser
 
 ## Setup
-
+```sh
+npm install --save-dev hardhat
+```
 ### 1. Reset MetaMask
 
 To ensure a clean state and avoid any potential issues with cached data, reset your MetaMask account.
